@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LP Grid — The map of private capital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#090c10;
+    --panel:rgba(16,21,29,0.55);
+    --panel-solid:#11161f;
+    --text:#e7e9ee;
+    --muted:#8791a3;
+    --signal:#5b8def;
+    --brass:#c9a06a;
+    --line:rgba(231,233,238,0.09);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;background:var(--ink);color:var(--text);
+    font-family:'Inter',sans-serif;overflow-x:hidden;scroll-behavior:smooth;
+  }
+  ::selection{background:var(--signal);color:#090c10;}
+  a{color:inherit;}
+  :focus-visible{outline:2px solid var(--signal);outline-offset:3px;}
+
+  #scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;}
+
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:var(--signal);z-index:30;transition:width .1s linear;}
+
+  nav{
+    position:fixed;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px clamp(20px,5vw,56px);
+    background:linear-gradient(to bottom, rgba(9,12,16,0.75), transparent);
+  }
+  .wordmark{
+    font-family:'Space Mono',monospace;font-weight:700;letter-spacing:0.12em;
+    font-size:14px;
+  }
+  .wordmark span{color:var(--brass);}
+  .nav-cta{
+    font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.08em;
+    border:1px solid var(--line);border-radius:999px;padding:9px 18px;
+    background:rgba(231,233,238,0.03);text-decoration:none;
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .nav-cta:hover{border-color:var(--signal);background:rgba(91,141,239,0.08);}
+
+  main{position:relative;z-index:1;}
+
+  .act{
+    min-height:100svh;min-height:100vh;
+    display:flex;align-items:center;
+    padding:120px clamp(20px,7vw,90px);
+  }
+  .act.align-left{justify-content:flex-start;}
+  .act.align-right{justify-content:flex-end;}
+  .act.align-center{justify-content:center;text-align:center;}
+
+  .panel{
+    max-width:600px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:clamp(24px,4vw,44px);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .act.align-center .panel{max-width:680px;}
+
+  .eyebrow{
+    font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.16em;
+    color:var(--brass);margin:0 0 18px;text-transform:uppercase;
+  }
+  h1,h2{
+    font-family:'Instrument Serif',serif;font-weight:400;line-height:1.05;
+    margin:0 0 20px;letter-spacing:-0.01em;
+  }
+  h1{font-size:clamp(42px,7vw,88px);}
+  h2{font-size:clamp(32px,4.6vw,54px);}
+  em{
+    font-style:italic;color:var(--signal);
+  }
+  p.lede{
+    font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:var(--muted);
+    margin:0 0 22px;max-width:56ch;
+  }
+  .act.align-center p.lede{margin-left:auto;margin-right:auto;}
+
+  .stat-row{display:flex;flex-wrap:wrap;gap:28px;margin-top:26px;}
+  .stat{font-family:'Space Mono',monospace;}
+  .stat b{display:block;font-size:22px;color:var(--text);}
+  .stat span{font-size:11px;color:var(--muted);letter-spacing:0.06em;}
+
+  .live-count{
+    font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);
+    letter-spacing:0.05em;margin-top:30px;
+  }
+  .scroll-cue{
+    position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.1em;
+    color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .scroll-cue .chev{
+    width:8px;height:8px;border-right:1px solid var(--muted);border-bottom:1px solid var(--muted);
+    transform:rotate(45deg);animation:bob 1.8s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(45deg);}50%{transform:translateY(6px) rotate(45deg);}}
+
+  .tag-row{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 6px;}
+  .tag{
+    font-family:'Space Mono',monospace;font-size:12px;padding:7px 14px;border-radius:999px;
+    border:1px solid var(--line);color:var(--muted);
+  }
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px;}
+  .chip{
+    font-family:'Space Mono',monospace;font-size:12px;padding:9px 16px;border-radius:999px;
+    border:1px solid var(--line);color:var(--muted);transition:all .5s ease;
+  }
+  .chip.active{border-color:var(--signal);color:var(--text);background:rgba(91,141,239,0.12);}
+
+  .badge-float{
+    position:absolute;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.08em;
+    padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(9,12,16,0.5);color:var(--muted);backdrop-filter:blur(8px);
+    animation:drift 7s ease-in-out infinite;
+  }
+  .badge-float.b2{animation-delay:1.4s;}
+  @keyframes drift{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+
+  .cta-btn{
+    font-family:'Space Mono',monospace;font-size:13px;letter-spacing:0.06em;
+    padding:14px 28px;border-radius:999px;border:1px solid var(--brass);
+    background:rgba(201,160,106,0.1);color:var(--text);cursor:pointer;
+    transition:background .3s ease, transform .2s ease;
+  }
+  .cta-btn:hover{background:rgba(201,160,106,0.22);}
+  .cta-btn:active{transform:scale(0.97);}
+  .cta-note{font-size:12px;color:var(--muted);margin-top:14px;}
+
+  footer{
+    position:relative;z-index:1;padding:40px clamp(20px,7vw,90px) 60px;
+    font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    border-top:1px solid var(--line);
+  }
+
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .9s ease, transform .9s ease;}
+  .reveal.in{opacity:1;transform:none;}
+
+  @media (max-width:760px){
+    .act{padding:100px 20px;}
+    .act.align-left, .act.align-right{justify-content:center;}
+    .panel{max-width:100%;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .reveal{transition-duration:.01s;}
+    .scroll-cue .chev, .badge-float{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<canvas id="scene"></canvas>
+
+<nav>
+  <div class="wordmark">LP <span>GRID</span></div>
+  <a class="nav-cta" href="#access">Request access</a>
+</nav>
+
+<main id="story">
+
+  <section class="act align-center" data-act="hero">
+    <div class="panel reveal">
+      <p class="eyebrow">Private markets intelligence</p>
+      <h1>The capital behind<br>capital, <em>finally mapped.</em></h1>
+      <p class="lede">LP Grid turns the scattered relationships across private markets — who's invested, who's raising, who's connected to whom — into a single living network.</p>
+      <p class="live-count" id="liveCount">mapping the network…</p>
+    </div>
+    <div class="scroll-cue"><span>SCROLL</span><span class="chev"></span></div>
+  </section>
+
+  <section class="act align-left" data-act="problem">
+    <div class="panel reveal">
+      <p class="eyebrow">I. The problem</p>
+      <h2>Private markets don't publish a directory.</h2>
+      <p class="lede">Deals get made in inboxes, warm intros, and back-channel calls. The relationships are the real infrastructure of this industry — and almost none of it is written down anywhere one place can see.</p>
+      <div class="stat-row">
+        <div class="stat"><b>~14,000</b><span>GP FIRMS, ROUGHLY</span></div>
+        <div class="stat"><b>~40,000</b><span>ACTIVE LPs, ROUGHLY</span></div>
+        <div class="stat"><b>ZERO</b><span>SHARED MAPS</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="act align-right" data-act="discovery">
+    <div class="panel reveal">
+      <p class="eyebrow">II. Discovery</p>
+      <h2>Find the right LP before your competitor does.</h2>
+      <p class="lede">LP Grid surfaces investors actively matching your fund's profile — sector focus, check size, geography, stage — the moment they start looking, not months later.</p>
+      <div class="tag-row">
+        <span class="tag">Healthcare</span>
+        <span class="tag">Series B+</span>
+        <span class="tag">$5–20M check</span>
+        <span class="tag">North America</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="act align-left" data-act="filter">
+    <div class="panel reveal">
+      <p class="eyebrow">III. Filter</p>
+      <h2>Narrow forty thousand LPs to the eleven that matter.</h2>
+      <p class="lede">Stack filters the way you actually think about fundraising — sector, vintage, check size, prior fund performance — and watch the network resolve down to a short, real list.</p>
+      <div class="chip-row">
+        <span class="chip">Sector: Healthcare</span>
+        <span class="chip">Geography: N. America</span>
+        <span class="chip">Check: $5–20M</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="act align-right" data-act="map" style="position:relative;">
+    <div class="panel reveal">
+      <p class="eyebrow">IV. The map</p>
+      <h2>See who already knows who.</h2>
+      <p class="lede">Before you ask for an intro, know if one already exists. LP Grid traces first- and second-degree relationships between GPs and LPs so warm paths surface before cold outreach does.</p>
+    </div>
+    <span class="badge-float" style="top:18%;left:8%;">GENERAL PARTNER</span>
+    <span class="badge-float b2" style="bottom:22%;left:14%;">LIMITED PARTNER</span>
+  </section>
+
+  <section class="act align-center" data-act="access" id="access">
+    <div class="panel reveal">
+      <p class="eyebrow">V. Access</p>
+      <h2>The grid is live.</h2>
+      <p class="lede">Built for the people who move private capital — allocators, GPs, and the placement teams between them.</p>
+      <button class="cta-btn" id="requestBtn">Request access</button>
+      <p class="cta-note" id="requestNote">By invitation, expanding weekly.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>LP GRID — PRIVATE MARKETS INTELLIGENCE</span>
+  <span>CONCEPT PREVIEW</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isMobile = window.innerWidth < 720;
+
+  /* ---------------- three.js scene ---------------- */
+  var canvas = document.getElementById('scene');
+  var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(0, 1.4, 34);
+
+  function makeSprite(){
+    var c = document.createElement('canvas');
+    c.width = c.height = 64;
+    var ctx = c.getContext('2d');
+    var g = ctx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,'rgba(255,255,255,1)');
+    g.addColorStop(0.4,'rgba(255,255,255,0.7)');
+    g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,64,64);
+    return new THREE.CanvasTexture(c);
+  }
+  var sprite = makeSprite();
+
+  var COLORS = {
+    gp: new THREE.Color('#b8925c'),
+    lp: new THREE.Color('#5b8def'),
+    unmapped: new THREE.Color('#4a5160'),
+    dim: new THREE.Color('#20242e')
+  };
+
+  var cols = isMobile ? 6 : 9;
+  var rows = isMobile ? 6 : 8;
+  var raw = [];
+  for(var i=0;i<cols;i++){
+    for(var j=0;j<rows;j++){
+      if(Math.random() < 0.16) continue;
+      var x = (i/(cols-1) - 0.5) * (isMobile?18:30);
+      var y = (j/(rows-1) - 0.5) * (isMobile?14:18);
+      var z = (Math.random()-0.5) * 14;
+      raw.push({x:x+(Math.random()-0.5)*1.6, y:y+(Math.random()-0.5)*1.6, z:z});
+    }
+  }
+  for(var s=raw.length-1;s>0;s--){ var k=Math.floor(Math.random()*(s+1)); var tmp=raw[s]; raw[s]=raw[k]; raw[k]=tmp; }
+
+  var nodeData = raw.map(function(p, idx){
+    var r = idx / raw.length;
+    var cat = r < 0.42 ? 'gp' : (r < 0.84 ? 'lp' : 'unmapped');
+    return { idx:idx, x:p.x, y:p.y, z:p.z, cat:cat, base: COLORS[cat].clone() };
+  });
+
+  var N = nodeData.length;
+  var positions = new Float32Array(N*3);
+  var baseColors = new Float32Array(N*3);
+  nodeData.forEach(function(n,i){
+    positions[i*3]=n.x; positions[i*3+1]=n.y; positions[i*3+2]=n.z;
+    baseColors[i*3]=n.base.r; baseColors[i*3+1]=n.base.g; baseColors[i*3+2]=n.base.b;
+  });
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('color', new THREE.BufferAttribute(baseColors.slice(),3));
+  var mat = new THREE.PointsMaterial({
+    size: isMobile ? 1.1 : 1.4,
+    map: sprite,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+    sizeAttenuation: true
+  });
+  var points = new THREE.Points(geo, mat);
+  scene.add(points);
+
+  /* ambient edges: connect each node to its 2 nearest neighbours */
+  var edgeSet = {};
+  var edgePairs = [];
+  nodeData.forEach(function(a){
+    var others = nodeData.filter(function(b){ return b.idx !== a.idx; })
+      .map(function(b){ return {b:b, d:Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z)}; })
+      .sort(function(p,q){ return p.d - q.d; })
+      .slice(0,2);
+    others.forEach(function(o){
+      if(o.d > 9) return;
+      var key = a.idx < o.b.idx ? a.idx+'-'+o.b.idx : o.b.idx+'-'+a.idx;
+      if(edgeSet[key]) return;
+      edgeSet[key] = true;
+      edgePairs.push([a, o.b]);
+    });
+  });
+  var edgePositions = new Float32Array(edgePairs.length*6);
+  edgePairs.forEach(function(pair, i){
+    var a=pair[0], b=pair[1];
+    edgePositions[i*6]=a.x; edgePositions[i*6+1]=a.y; edgePositions[i*6+2]=a.z;
+    edgePositions[i*6+3]=b.x; edgePositions[i*6+4]=b.y; edgePositions[i*6+5]=b.z;
+  });
+  var edgeGeo = new THREE.BufferGeometry();
+  edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePositions,3));
+  var edgeMat = new THREE.LineBasicMaterial({color:0x3a4150, transparent:true, opacity:0.22});
+  var edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
+  scene.add(edgeLines);
+
+  /* act-specific subsets */
+  var eligible = nodeData.filter(function(n){ return n.cat !== 'unmapped'; });
+  var shuffledEligible = eligible.slice().sort(function(){ return Math.random()-0.5; });
+  var discoverySet = shuffledEligible.slice(0, Math.min(18, shuffledEligible.length));
+  var filterSet = discoverySet.slice(0, Math.min(11, discoverySet.length));
+
+  var gpPool = nodeData.filter(function(n){ return n.cat==='gp'; });
+  var lpPool = nodeData.filter(function(n){ return n.cat==='lp'; });
+  var candidatePairs = [];
+  gpPool.forEach(function(g){
+    lpPool.forEach(function(l){
+      candidatePairs.push({g:g, l:l, d:Math.hypot(g.x-l.x, g.y-l.y, g.z-l.z)});
+    });
+  });
+  candidatePairs.sort(function(a,b){ return a.d - b.d; });
+  var usedNodes = {};
+  var relationshipPairs = [];
+  for(var c=0;c<candidatePairs.length && relationshipPairs.length<5;c++){
+    var cand = candidatePairs[c];
+    if(usedNodes[cand.g.idx] || usedNodes[cand.l.idx]) continue;
+    relationshipPairs.push(cand);
+    usedNodes[cand.g.idx]=true; usedNodes[cand.l.idx]=true;
+  }
+
+  var relationshipLines = relationshipPairs.map(function(pair){
+    var start = new THREE.Vector3(pair.g.x, pair.g.y, pair.g.z);
+    var end = new THREE.Vector3(pair.l.x, pair.l.y, pair.l.z);
+    var mid = start.clone().lerp(end, 0.5).add(new THREE.Vector3(0, 2.4, 1.2));
+    var curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    var pts = curve.getPoints(24);
+    var g2 = new THREE.BufferGeometry().setFromPoints(pts);
+    var m2 = new THREE.LineBasicMaterial({color:0xdfc9a0, transparent:true, opacity:0});
+    var line = new THREE.Line(g2, m2);
+    scene.add(line);
+    return line;
+  });
+
+  var countCaption = document.getElementById('liveCount');
+  if(countCaption){
+    countCaption.textContent = N + ' nodes mapped · ' + edgePairs.length + ' connections traced';
+  }
+
+  /* ---------------- node colour state animation ---------------- */
+  var colorAnimReq = null;
+  function animateTo(targetColors, duration){
+    var startColors = geo.attributes.color.array.slice();
+    var startTime = performance.now();
+    if(colorAnimReq) cancelAnimationFrame(colorAnimReq);
+    function step(now){
+      var t = Math.min(1, (now-startTime)/duration);
+      var e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      var arr = geo.attributes.color.array;
+      for(var i=0;i<arr.length;i++){
+        arr[i] = startColors[i] + (targetColors[i]-startColors[i])*e;
+      }
+      geo.attributes.color.needsUpdate = true;
+      if(t<1) colorAnimReq = requestAnimationFrame(step);
+    }
+    colorAnimReq = requestAnimationFrame(step);
+  }
+
+  function stateColors(highlightList, dimOthers){
+    var target = new Float32Array(N*3);
+    var highlightIdx = {};
+    highlightList.forEach(function(n){ highlightIdx[n.idx]=true; });
+    var white = new THREE.Color('#ffffff');
+    nodeData.forEach(function(n,i){
+      var col;
+      if(highlightList.length===0){
+        col = n.base;
+      } else if(highlightIdx[n.idx]){
+        col = n.base.clone().lerp(white, 0.25);
+      } else if(dimOthers){
+        col = n.base.clone().lerp(COLORS.dim, 0.85);
+      } else {
+        col = n.base;
+      }
+      target[i*3]=col.r; target[i*3+1]=col.g; target[i*3+2]=col.b;
+    });
+    return target;
+  }
+
+  function fadeLine(material, val){
+    if(window.gsap){ gsap.to(material, {opacity:val, duration:1.1, ease:'power2.out'}); }
+    else { material.opacity = val; }
+  }
+
+  function setAct(act){
+    if(act==='hero' || act==='problem'){
+      animateTo(baseColors, 900);
+      relationshipLines.forEach(function(l){ fadeLine(l.material,0); });
+    } else if(act==='discovery'){
+      animateTo(stateColors(discoverySet,true), 900);
+      relationshipLines.forEach(function(l){ fadeLine(l.material,0); });
+    } else if(act==='filter'){
+      animateTo(stateColors(filterSet,true), 900);
+      relationshipLines.forEach(function(l){ fadeLine(l.material,0); });
+    } else if(act==='map'){
+      animateTo(stateColors(filterSet,false), 900);
+      relationshipLines.forEach(function(l){ fadeLine(l.material,1); });
+    } else if(act==='access'){
+      animateTo(baseColors, 1200);
+      relationshipLines.forEach(function(l){ fadeLine(l.material,0); });
+    }
+  }
+
+  /* ---------------- render loop ---------------- */
+  var mouseX = 0;
+  if(!isMobile && !reduceMotion){
+    window.addEventListener('mousemove', function(e){
+      mouseX = (e.clientX/window.innerWidth - 0.5);
+    });
+  }
+
+  function render(){
+    requestAnimationFrame(render);
+    if(!reduceMotion){
+      points.rotation.y += 0.0007;
+      edgeLines.rotation.y += 0.0007;
+      relationshipLines.forEach(function(l){ l.rotation.y += 0.0007; });
+      camera.position.x += ((mouseX*3) - camera.position.x) * 0.03;
+    }
+    renderer.render(scene, camera);
+  }
+  render();
+
+  window.addEventListener('resize', function(){
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  /* ---------------- scroll-driven camera + act triggers ---------------- */
+  if(window.gsap && window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.to(camera.position, {
+      z: isMobile ? 20 : 14,
+      y: -1.2,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#story',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 0.6
+      }
+    });
+
+    document.querySelectorAll('.act').forEach(function(sec){
+      ScrollTrigger.create({
+        trigger: sec,
+        start: 'top center',
+        end: 'bottom center',
+        onEnter: function(){ setAct(sec.dataset.act); },
+        onEnterBack: function(){ setAct(sec.dataset.act); }
+      });
+    });
+  }
+
+  /* ---------------- scroll progress bar ---------------- */
+  var progressEl = document.getElementById('progress');
+  window.addEventListener('scroll', function(){
+    var h = document.documentElement;
+    var pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    if(progressEl) progressEl.style.width = pct + '%';
+  });
+
+  /* ---------------- DOM reveal ---------------- */
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting) en.target.classList.add('in');
+    });
+  }, {threshold:0.3});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  /* ---------------- filter chip demo cycle ---------------- */
+  var chips = document.querySelectorAll('.chip');
+  if(chips.length){
+    var chipIdx = 0;
+    setInterval(function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chips[chipIdx % chips.length].classList.add('active');
+      chipIdx++;
+    }, 2200);
+  }
+
+  /* ---------------- request access button ---------------- */
+  var btn = document.getElementById('requestBtn');
+  var note = document.getElementById('requestNote');
+  if(btn){
+    btn.addEventListener('click', function(){
+      btn.textContent = 'Request received';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      if(note) note.textContent = "We'll follow up shortly.";
+    });
+  }
+})();
+</script>
+</body>
+</html>
